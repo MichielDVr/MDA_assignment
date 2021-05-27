@@ -25,25 +25,23 @@ df = [df0,df1,df2,df3,df4,df5,df5,df6,df7,df8]
 
 k=0
 adj={}
-for i in range(0,8):
+for i in range(0,9):
     adj[str(ls[k])] = df[i]
     k+=1
 
 with open("C:/Users/michi/Desktop/MDA/adj","wb") as f:
-    pickle.dump(adj, f)
+   pickle.dump(adj, f)
 f.close()
 
-
-
-
-
-
-#labels = list(set(df['Entity name'].str.lower()))
+df = pickle.load(open("C:/Users/michi/Desktop/MDA/df_All_with2019","rb"))
+print(len(set(df['2020 Q4']['Entity name'])))
+print(len(adj['2020 Q4']))
 
 
 
 
 def Adj_weight(df):
+    '''compute adjacency matrix of investment companies'''
     dummies = pd.get_dummies(df['CUSIP']).astype(float)
     weights = dummies.T * np.asarray(df['(x$1000)']).astype(float)
     df_ = pd.concat([df[['CIK']], weights.T], axis=1)
@@ -59,62 +57,80 @@ def Adj_weight(df):
 
 
 def centrality_attr(G):
-    bb = nx.betweenness_centrality(G)
-    cc = nx.closeness_centrality(G)
-    dc = nx.degree_centrality(G)
-    centrality = {j: {'betweenness': bb[j], 'closeness': cc[j], 'degree': dc[j]} for i, j in enumerate(G.nodes)}
-    nx.set_node_attributes(G, centrality)
+    '''Calculate centrality metric and assign to nodes'''
+    bb = list(nx.betweenness_centrality(G).values())
+    cc = list(nx.closeness_centrality(G).values())
+    dc = list(nx.degree_centrality(G).values())
+    eg = list(nx.eigenvector_centrality(G).values())
+    mean = 0.25*(bb/np.sum(bb)+cc/np.sum(cc)+dc/np.sum(dc)+eg/np.sum(eg))
+    centrality = {j: {'betweenness': bb[j], 'closeness': cc[j], 'degree': dc[j], 'eigenvector':eg[j], 'mean':mean[j]} for j,i in enumerate(G.nodes)}
+    return nx.set_node_attributes(G, centrality)
 
+
+#print([i for i in G.nodes])
 def rank_centrality(G,centrality_metric):
-    if centrality_metric == 'degree':
-        rank=sorted(nx.degree_centrality(G).items(), key=lambda x: x[1], reverse=True)
-    if centrality_metric == 'betweenness':
-        rank=sorted(nx.degree_centrality(G).items(), key=lambda x: x[1], reverse=True)
-    if centrality_metric == 'closeness':
-        rank=sorted(nx.degree_centrality(G).items(), key=lambda x: x[1], reverse=True)
-    rank_ = ["1. %s : %s " %(rank[0][0],rank[1][1]),
-    "2. %s : %s " %(rank[1][0],rank[1][1]), "3. %s : %s " %(rank[2][0], rank[2][1])]
-    return rank_
+    '''Returns a ranking of most central nodes + centrality value'''
+    all_metrics = {i:G.nodes[i][centrality_metric] for i in G.nodes}
+    rank=sorted(all_metrics.items(), key=lambda x: x[1], reverse=True)
+    rank_text = ["1. %s : %.4f"%(rank[0][0],rank[1][1]),
+    "2. %s : %.4f" %(rank[1][0],rank[1][1]), "3. %s : %.4f" %(rank[2][0], rank[2][1])]
+    return rank_text
 
-def network_fit(adj):
+def lowest_rank_centrality(G, centrality_metric):
+    '''Returns a ranking of least central nodes + centrality value'''
+    all_metrics = {i:G.nodes[i][centrality_metric] for i in G.nodes}
+    rank=sorted(all_metrics.items(), key=lambda x: x[1])
+    rank_text = "1. %s : %.4f" %(rank[0][0],rank[0][1])
+    return rank_text
+
+def connectivity(G):
+    diameter = 'Diameter: %s'%nx.diameter(G)
+    edge_connectivity = 'Edge connectivity: %s' %nx.edge_connectivity(G)
+    node_connectivity = 'Node connectivity: %s' %nx.node_connectivity(G)
+    return diameter, edge_connectivity, node_connectivity
+
+def network_fit(adj,df):
+    '''Fit a network from an adjacency matrix and relabel nodes by company names'''
     np.random.seed(3)
     # define network in networkx
     G = nx.from_numpy_matrix(adj)
-    # labels are CIK numbers
-    #labels = list(set(df['quarter_3']['Entity name'].str.lower()))
-#    labels = {i: adj[1].index[i] for i in G.nodes}
 
- #   G = nx.relabel_nodes(G, labels)
-    # calculate centrality metrics and assign to node attributes
+    labels = list(set(df['Entity name']))
+    labels =[i.title() for i in labels]
+
+
+    labels = {j: labels[i] for i,j in enumerate(G.nodes)}
     centrality_attr(G)
+
+    G=nx.relabel_nodes(G,labels)
+
+    # calculate centrality metrics and assign to node attributes
     return G
 
-# TODO: instead of CIK numbers company names
-def plot_network(adj, centrality_metric):
-    # positions of nodes according to spring algorithm
-    G= network_fit(adj)
-    pos = nx.spring_layout(G, dim=2)
 
+# TODO: instead of CIK numbers company names
+def plot_network(adj,df, centrality_metric):
+    ''' plot network from adjacency matrix of a quarter and weight according to centrality metric'''
+    # positions of nodes according to spring algorithm
+    G= network_fit(adj,df)
+    pos = nx.spring_layout(G, dim=2)
     # we need to seperate the X,Y coordinates for Plotly
     x_nodes = [pos[i][0] for i in G.nodes]  # x-coordinates of nodes
     y_nodes = [pos[i][1] for i in G.nodes]  # y-coordinates
 
     # hover info for node
-    node_info = ['CIK: ' + str(i) + '<br>' + str(centrality_metric) + ' centrality :' + str(
-        np.round(G.nodes[i][centrality_metric], 4)) for i in (G.nodes)]
+    node_info = ['Company: ' + str(j) + '<br>' + str(centrality_metric) + ' centrality: ' + str(
+        np.round(G.nodes[j][centrality_metric], 4)) +'<br>' + 'Market value: '+ str(int(np.sum(adj,axis=1)[i]/(10**10))) + ' *e^10' for i,j in enumerate(G.nodes)]
     # edge_info=['MV of shared sec.:' + str(i) for i in adj]
-
     # traces for edges: different weights -> different widths of lines (I scale them to 0-1 so that abs differences are not to big)
     edge_list = G.edges
     total_weight = []
-    for edge in edge_list:
-        total_weight.append(list(G[edge[0]][edge[1]].values())[0])
     edges_list = [dict(type='scatter',
                        x=[pos[edge[0]][0], pos[edge[1]][0]],
                        y=[pos[edge[0]][1], pos[edge[1]][1]],
-                       mode='lines', hoverinfo='skip', text=np.max(G[edge[0]][edge[1]]['weight']),
-                       line=dict(width=(list(G[edge[0]][edge[1]].values())[0] - np.min(total_weight)) / (
-                                   np.max(total_weight) - np.min(total_weight)) * 4 + 0.05, color='blue')) for edge in
+                       mode='lines', hoverinfo='skip',
+                       line=dict(width=(list(G[edge[0]][edge[1]].values())[0]) / (
+                                   10**18) + 0.05, color='blue')) for edge in
                   edge_list]
 
     # trace3_list = []
@@ -153,11 +169,12 @@ def plot_network(adj, centrality_metric):
 
     # trace for nodes, different node sizes -> choose centrality alg
     # node sizes are multiplied by a number so that abs differences are bigger
+    #total_weight_nodes = [G.nodes[i][centrality_metric] for i in G.nodes]
+    #print(total_weight_nodes)
     trace_nodes = go.Scatter(x=x_nodes,
                              y=y_nodes,
-                             # z=z_nodes,
                              mode='markers',
-                             marker=dict(symbol='circle', size=[G.nodes[i][centrality_metric] * 20 for i in G.nodes],
+                             marker=dict(symbol='circle', size=[(G.nodes[i][centrality_metric]+1)* 10 for i in G.nodes],
                                          colorscale=['lightgreen', 'magenta']), line=dict(color='red', width=0.5),
                              text=node_info,
                              hoverinfo='text')
@@ -171,7 +188,7 @@ def plot_network(adj, centrality_metric):
     # layout for the plot
 
     # Include the traces, create a figure
-    layout = go.Layout(title="Network with shared positions of investment companies",
+    layout = go.Layout(title="Network for shared positions of 20 large investment companies",
                        width=650,
                        height=625,
                        showlegend=False,
@@ -185,8 +202,4 @@ def plot_network(adj, centrality_metric):
     data = edges_list + [trace_nodes]
     return go.Figure(data=data, layout=layout)
 
-
-# In[19]:
-
-#plot_network(q2[0], q2[1], 'closeness')
 

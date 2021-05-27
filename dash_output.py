@@ -1,85 +1,92 @@
-import pickle
-
 import dash
 import dash_core_components as dcc
 import dash_html_components as html
 import dash_bootstrap_components as dbc
 from graph import *
 from dash.dependencies import Input, Output
-# dict with quarters as values
-d=dict(zip(range(0,8),adj.keys()))
+
+
+# dict with quarters as values used for slider
+d=dict(zip(range(0,9),adj.keys()))
 d={int(k):v for k,v in d.items()}
 
+# list for centrality measures used for dropdown
+ls_centrality=['degree','betweenness','closeness', 'eigenvector', 'mean']
+
 BS = "https://stackpath.bootstrapcdn.com/bootstrap/4.4.1/css/bootstrap.min.css"
-ls=['degree','betweenness','closeness']
 app = dash.Dash(__name__, external_stylesheets=[BS])
 
-controls = html.Div(
-    [
-    dbc.Card([
-        html.H6("Select graph", className="card-title"),
+control_centrality = dbc.Card([
         dbc.FormGroup(
             [
-                dbc.Label("Node definition: centrality metric"),
+                dbc.Label("Node definition:"),
                 dcc.Dropdown(
                     id="centrality",
                     options=[
-                        {"label": i, "value": i} for i in ls
+                        {"label": i, "value": i} for i in ls_centrality
                     ],
                     value="degree"),
                 ]
             ),
         ]
-    ),
-        dbc.Label("Select quarter"),
+    )
+control_quarter=dbc.Card([
+        dbc.Label("Quarter:"),
         dcc.Slider(id="quarter",
 
                     min=0,
                     max=9,
                     step=None,
                     marks=d,
-                    value=0,
-                    )
-    ],
-    )
+                    value=0,)
+            ],
+        )
 
-card_content = dbc.CardBody(
-    [
-                        html.H6("Most central companies", className="card-title"),
-                        html.P(id="Rank centrality")
-                        #html.P("2. %s : %s " % (rank_centrality('degree')[1][0], rank_centrality('degree')[1][1])),
-                        #html.P("3. %s : %s " % (rank_centrality('degree')[2][0], rank_centrality('degree')[2][1]))
-    ]
-)
 
 app.layout = dbc.Container(
     [
         html.H1("Uncovering the network"),
+        html.H4("Group Georgia"),
         html.Hr(),
+        html.H5("Select graph"),
+        dbc.Row([
+            dbc.Col(control_centrality, md=3),
+            dbc.Col(control_quarter, md=6)], align='center'),
         dbc.Row(
             [
-                dbc.Col(controls, md=4),
-                dbc.Col(dcc.Graph(id="cluster-graph"), md=8),
-                dbc.Col(dbc.CardBody( [
-                        html.H6("Most central companies", className="card-title"),
-                        html.P(id="1_Rank-centrality"),
-                        html.P(id="2_Rank-centrality"),
-                        html.P(id="3_Rank-centrality"),
-
-                        #html.P("2. %s : %s " % (rank_centrality('degree')[1][0], rank_centrality('degree')[1][1])),
-                        #html.P("3. %s : %s " % (rank_centrality('degree')[2][0], rank_centrality('degree')[2][1]))
-])),
-            ],
-        align='center',
-    )
+            dbc.Col(dcc.Graph(id="cluster-graph"), md=7),
+            dbc.Col(
+                [dbc.ListGroup([
+                    dbc.ListGroupItemHeading("Connectivity of graph"),
+                    dbc.ListGroupItem(id="diameter"),
+                    dbc.ListGroupItem(id="edge_connectivity"),
+                    dbc.ListGroupItem(id="node_connectivity"),
+                ]), html.Hr(),
+                dbc.ListGroup([
+                        dbc.ListGroupItemHeading("Most central companies"),
+                        dbc.ListGroupItem(id="1_Rank-centrality"),
+                        dbc.ListGroupItem(id="2_Rank-centrality"),
+                        dbc.ListGroupItem(id="3_Rank-centrality"),
+                        ]), html.Hr(),
+                    dbc.ListGroup([
+                    dbc.ListGroupItemHeading("Most de-central company"),
+                    dbc.ListGroupItem(id="Smallest-centrality"),
+                        ]),
+                ], md=3)
+            ], align='center',
+        )
     ],
- fluid=True)
+fluid=True)
 
 @app.callback([
     Output("cluster-graph", "figure"),
     Output("1_Rank-centrality", "children"),
     Output("2_Rank-centrality", "children"),
-    Output("3_Rank-centrality", "children")
+    Output("3_Rank-centrality", "children"),
+    Output("Smallest-centrality", "children"),
+    Output("diameter", "children"),
+    Output("edge_connectivity", "children"),
+    Output("node_connectivity", "children"),
 
 ],
     [
@@ -88,18 +95,21 @@ app.layout = dbc.Container(
     ],
 )
 
+def update_figure(quarter_key,centrality_metric):
+    #select quarter
+    quarter = list(d.values())[quarter_key]
+    df_quarter = df[quarter]
+    #select adjacency matrix for that quarter
+    adj_quarter = adj[quarter]
+    #functions to obtain callback output variables
+    G=network_fit(adj_quarter,df_quarter)
 
-
-
-
-def update_figure(quarter,centrality_metric):
-    quarter_ = list(d.values())[quarter]
-    print(quarter_)
-    adj_ = adj[quarter_]
-    G=network_fit(adj_)
     rank_centrality_ = rank_centrality(G,centrality_metric)
-    figure = plot_network(adj_, centrality_metric)
-    return figure, rank_centrality_[0], rank_centrality_[1], rank_centrality_[2]
+    lowest_rank_centrality_ = lowest_rank_centrality(G,centrality_metric)
+    figure = plot_network(adj_quarter,df_quarter, centrality_metric)
+    connectivity_ = connectivity(G)
+
+    return figure, rank_centrality_[0], rank_centrality_[1], rank_centrality_[2], lowest_rank_centrality_, connectivity_[0], connectivity_[1], connectivity_[2]
 
 
 

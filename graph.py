@@ -3,37 +3,17 @@
 
 
 import pandas as pd
-
 import pickle
 import numpy as np
 import networkx as nx
 import plotly.graph_objects as go
+import cloudpickle as cp
+from urllib.request import urlopen
 
 
+adj = pickle.load(open("adj","rb"))
+df = cp.load(urlopen('https://s3groupgeorgia.s3.eu-central-1.amazonaws.com/data/df'))
 
-df0 = pickle.load(open('adj_19q1', "rb"))
-df1 = pickle.load(open('adj_19q2', "rb"))
-df2 = pickle.load(open('adj_19q3', "rb"))
-df3 = pickle.load(open('adj_19q4', "rb"))
-df4 = pickle.load(open('adj_20q1', "rb"))
-df5 = pickle.load(open('adj_20q2', "rb"))
-df6 = pickle.load(open('adj_20q3', "rb"))
-df7 = pickle.load(open('adj_20q4', "rb"))
-df8 = pickle.load(open('adj_21q1', "rb"))
-ls = ['2019 Q1','2019 Q2','2019 Q3','2019 Q4','2020 Q1','2020 Q2','2020 Q3','2020 Q4','2021 Q1']
-df = [df0,df1,df2,df3,df4,df5,df5,df6,df7,df8]
-
-k=0
-adj={}
-for i in range(0,9):
-    adj[str(ls[k])] = df[i]
-    k+=1
-
-with open("C:/Users/michi/Desktop/MDA/adj","wb") as f:
-   pickle.dump(adj, f)
-f.close()
-
-df = pickle.load(open("C:/Users/michi/Desktop/MDA/df_All_with2019","rb"))
 print(len(set(df['2020 Q4']['Entity name'])))
 print(len(adj['2020 Q4']))
 

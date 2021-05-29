@@ -169,13 +169,13 @@ class filings:
             pickle.dump(df_All, f)
             f.close()
         for quarter in self.quarters:
-            adj = self.adj(df_All[quarter])
+            adj = self.adjacency_matrix(df_All[quarter])
         with open(self.path + os.sep + 'adj', "wb") as f:
             pickle.dump(adj, f)
             f.close()
 
 
-    def Adj_weight(df):
+    def adjacency_matrix(df):
         '''compute adjacency matrix of investment companies based on value of common holdings'''
         dummies = pd.get_dummies(df['CUSIP']).astype(float)
         weights = dummies.T * np.asarray(df['(x$1000)']).astype(float)

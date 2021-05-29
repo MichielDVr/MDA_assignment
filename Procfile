@@ -1,1 +1,1 @@
-web: gunicorn dash_output:server
+web: gunicorn dash_output.py:server

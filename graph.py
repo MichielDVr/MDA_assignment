@@ -14,11 +14,6 @@ from urllib.request import urlopen
 adj = pickle.load(open("adj","rb"))
 df = cp.load(urlopen('https://s3groupgeorgia.s3.eu-central-1.amazonaws.com/data/df'))
 
-print(len(set(df['2020 Q4']['Entity name'])))
-print(len(adj['2020 Q4']))
-
-
-
 
 def Adj_weight(df):
     '''compute adjacency matrix of investment companies'''

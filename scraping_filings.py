@@ -185,5 +185,3 @@ class filings:
         v = np.tril(v, -1)
         return v
 
-
-filings(path).urls

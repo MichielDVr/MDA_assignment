@@ -4,17 +4,18 @@ import dash_html_components as html
 import dash_bootstrap_components as dbc
 from graph import *
 from dash.dependencies import Input, Output
-
+import numpy as np
 
 # dict with quarters as values used for slider
 d=dict(zip(range(0,9),adj.keys()))
 d={int(k):v for k,v in d.items()}
 
 # list for centrality measures used for dropdown
-ls_centrality=['degree','betweenness','closeness', 'eigenvector', 'mean']
+ls_centrality=['degree','betweenness','closeness', 'eigenvalue', 'mean']
 
 BS = "https://stackpath.bootstrapcdn.com/bootstrap/4.4.1/css/bootstrap.min.css"
 app = dash.Dash(__name__, external_stylesheets=[BS])
+app.title ='Uncovering the network'
 server = app.server
 
 control_centrality = dbc.Card([
@@ -58,6 +59,12 @@ app.layout = dbc.Container(
             dbc.Col(dcc.Graph(id="cluster-graph"), md=7),
             dbc.Col(
                 [dbc.ListGroup([
+                    dbc.ListGroupItemHeading("Number of edges"),
+                    dbc.ListGroupItem(id="numberEdges"),
+                    dbc.ListGroupItemHeading("Total value of securities"),
+                    dbc.ListGroupItem(id="totalValue"),
+                ]), html.Hr(),
+                dbc.ListGroup([
                     dbc.ListGroupItemHeading("Connectivity of graph"),
                     dbc.ListGroupItem(id="diameter"),
                     dbc.ListGroupItem(id="edge_connectivity"),
@@ -81,6 +88,8 @@ fluid=True)
 
 @app.callback([
     Output("cluster-graph", "figure"),
+    Output("numberEdges", "children"),
+    Output("totalValue", "children"),
     Output("1_Rank-centrality", "children"),
     Output("2_Rank-centrality", "children"),
     Output("3_Rank-centrality", "children"),
@@ -99,19 +108,20 @@ fluid=True)
 def update_figure(quarter_key,centrality_metric):
     #select quarter
     quarter = list(d.values())[quarter_key]
+    #select adjacency matrix and dataframe of fillings for that quarter
     df_quarter = df[quarter]
-    #select adjacency matrix for that quarter
     adj_quarter = adj[quarter]
     #functions to obtain callback output variables
     G=network_fit(adj_quarter,df_quarter)
-
+    # ranking of nodes based on centrality/ connectivity
     rank_centrality_ = rank_centrality(G,centrality_metric)
     lowest_rank_centrality_ = lowest_rank_centrality(G,centrality_metric)
-    figure = plot_network(adj_quarter,df_quarter, centrality_metric)
     connectivity_ = connectivity(G)
-
-    return figure, rank_centrality_[0], rank_centrality_[1], rank_centrality_[2], lowest_rank_centrality_, connectivity_[0], connectivity_[1], connectivity_[2]
-
+    numberEdges = 'Number of edges:' + str(len(G.edges))
+    totalValue = 'Total value of securities: ' + str(int(np.sum(adj_quarter) / (10 ** 13))) + 'e+13$ ' +
+    #make network
+    figure = plot_network(adj_quarter,df_quarter, centrality_metric)
+    return figure, numberEdges, totalValue, rank_centrality_[0], rank_centrality_[1], rank_centrality_[2], lowest_rank_centrality_, connectivity_[0], connectivity_[1], connectivity_[2]
 
 
 app.config['suppress_callback_exceptions'] = True

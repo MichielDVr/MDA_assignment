@@ -12,7 +12,7 @@ from urllib.request import urlopen
 
 
 adj = pickle.load(open("adj","rb"))
-df = cp.load(urlopen('https://s3groupgeorgia.s3.eu-central-1.amazonaws.com/data/df'))
+df = cp.load(urlopen('https://s3groupgeorgia.s3.eu-central-1.amazonaws.com/data/df_All'))
 
 
 def Adj_weight(df):

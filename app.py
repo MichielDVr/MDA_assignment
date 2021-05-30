@@ -118,7 +118,7 @@ def update_figure(quarter_key,centrality_metric):
     lowest_rank_centrality_ = lowest_rank_centrality(G,centrality_metric)
     connectivity_ = connectivity(G)
     numberEdges = 'Number of edges:' + str(len(G.edges))
-    totalValue = 'Total value of securities: ' + str(int(np.sum(adj_quarter) / (10 ** 13))) + 'e+13$ ' +
+    totalValue = 'Total value of securities: ' + str(int(np.sum(adj_quarter) / (10 ** 13))) + 'e+13$ '
     #make network
     figure = plot_network(adj_quarter,df_quarter, centrality_metric)
     return figure, numberEdges, totalValue, rank_centrality_[0], rank_centrality_[1], rank_centrality_[2], lowest_rank_centrality_, connectivity_[0], connectivity_[1], connectivity_[2]

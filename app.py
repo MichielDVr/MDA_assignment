@@ -15,6 +15,7 @@ ls_centrality=['degree','betweenness','closeness', 'eigenvector', 'mean']
 
 BS = "https://stackpath.bootstrapcdn.com/bootstrap/4.4.1/css/bootstrap.min.css"
 app = dash.Dash(__name__, external_stylesheets=[BS])
+server = app.server
 
 control_centrality = dbc.Card([
         dbc.FormGroup(

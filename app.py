@@ -50,8 +50,7 @@ app.layout = dbc.Container(
         html.H1("Uncovering the network"),
         html.H4("Group Georgia"),
         html.Hr(),
-        #html.H5("Weighted network for 13F-HR filings from the first quarter pf 2019 to the first quarter of 2021.",
-                #" To goal is the examine the effect of COVID-19 on the netwrok"),
+        html.H6('Network of worth of holdings shared by 20 big investments companies'),
         html.H5("Select graph"),
         dbc.Row([
             dbc.Col(control_centrality,md=3) ,
@@ -62,32 +61,34 @@ app.layout = dbc.Container(
                 [dbc.ListGroup([
                     dbc.ListGroupItemHeading("Total value of securities"),
                     dbc.ListGroupItem(id="totalValue"),
-                ]), html.Hr(),
+                ]),
+                html.Hr(),
                 dbc.ListGroup([
                     dbc.ListGroupItemHeading("Connectivity of graph"),
                     dbc.ListGroupItem(id="numberEdges"),
                     dbc.ListGroupItem(id="diameter"),
                     dbc.ListGroupItem(id="edge_connectivity"),
                     dbc.ListGroupItem(id="node_connectivity"),
-                ]), html.Hr(),
+                ]),
+                html.Hr(),
                 dbc.ListGroup([
                         dbc.ListGroupItemHeading("Most central companies"),
                         dbc.ListGroupItem(id="1_Rank-centrality"),
                         dbc.ListGroupItem(id="2_Rank-centrality"),
                         dbc.ListGroupItem(id="3_Rank-centrality"),
                         ]),
-                    html.Hr(),
-                    dbc.ListGroup([
-                    dbc.ListGroupItemHeading("Most de-central company"),
-                    dbc.ListGroupItem(id="Smallest-centrality"),
-                        ]),
+                html.Hr(),
+                dbc.ListGroup([
+                dbc.ListGroupItemHeading("Most de-central company"),
+                dbc.ListGroupItem(id="Smallest-centrality"),
+                ]),
                 ], md=3),
-            ], align='right',
-        ),
+            ],
+            align='right',),
         dbc.Row(
             [
-html.Button('Table', id='table-but', n_clicks=0),
-                    html.Div(id='centrality table'),
+            html.Button('Table', id='table-but', n_clicks=0),
+            html.Div(id='centrality table'),
             ], align='center'
         ),
     ]   ,
@@ -109,7 +110,7 @@ fluid=True)
     [
         Input("quarter", "value"),
         Input("centrality", "value"),
-],
+    ],
 )
 
 def update_figure(quarter_key,centrality_metric):
@@ -125,7 +126,7 @@ def update_figure(quarter_key,centrality_metric):
     lowest_rank_centrality_ = lowest_rank_centrality(G,centrality_metric)
     connectivity_ = connectivity(G)
     numberEdges = 'Number of edges: ' + str(len(G.edges))
-    totalValue = str(int(np.sum(adj_quarter) / (10 ** 13))) + 'e+13$ '
+    totalValue = str(int(np.sum(adj_quarter) / (10 ** 13))) + ' e+13$ '
     #make network
     figure = plot_network(adj_quarter,df_quarter, centrality_metric)
     return figure, numberEdges, totalValue, rank_centrality_[0], rank_centrality_[1], rank_centrality_[2], lowest_rank_centrality_, connectivity_[0], connectivity_[1], connectivity_[2]
@@ -136,8 +137,7 @@ def update_figure(quarter_key,centrality_metric):
     [
         Input("quarter", "value"),
         Input("centrality", "value"),
-        Input('table-but', 'n_clicks'),
-],
+        Input('table-but', 'n_clicks'),],
 )
 def table(quarter_key, centrality_metric, n_clicks):
     #select quarter

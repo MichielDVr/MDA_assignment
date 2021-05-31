@@ -111,7 +111,7 @@ def plot_network(adj,df, centrality_metric):
     # layout for the plot
 
     # Include the traces, create a figure
-    layout = go.Layout(title="Network with shared positions of investment companies",
+    layout = go.Layout(
                        width=650,
                        height=625,
                        showlegend=False,

@@ -15,21 +15,6 @@ adj = pickle.load(open("adj","rb"))
 df = cp.load(urlopen('https://s3groupgeorgia.s3.eu-central-1.amazonaws.com/data/df_All'))
 
 
-def Adj_weight(df):
-    '''compute adjacency matrix of investment companies'''
-    dummies = pd.get_dummies(df['CUSIP']).astype(float)
-    weights = dummies.T * np.asarray(df['(x$1000)']).astype(float)
-    df_ = pd.concat([df[['CIK']], weights.T], axis=1)
-    weights = df_.groupby(['CIK']).sum()
-    v = np.dot(weights, weights.T)
-    v = np.tril(v, -1)
-    return v, weights
-
-
-
-
-
-
 
 def centrality_attr(G):
     '''Calculate centrality metric and assign to nodes'''
@@ -38,7 +23,7 @@ def centrality_attr(G):
     dc = list(nx.degree_centrality(G).values())
     eg = list(nx.eigenvector_centrality(G).values())
     mean = 0.25*(bb/np.sum(bb)+cc/np.sum(cc)+dc/np.sum(dc)+eg/np.sum(eg))
-    centrality = {j: {'betweenness': bb[j], 'closeness': cc[j], 'degree': dc[j], 'eigenvector':eg[j], 'mean':mean[j]} for j,i in enumerate(G.nodes)}
+    centrality = {j: {'betweenness': bb[j], 'closeness': cc[j], 'degree': dc[j], 'eigenvalue':eg[j], 'mean':mean[j]} for j,i in enumerate(G.nodes)}
     return nx.set_node_attributes(G, centrality)
 
 

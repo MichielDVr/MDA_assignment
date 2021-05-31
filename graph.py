@@ -3,31 +3,30 @@
 
 
 import pandas as pd
-import pickle
 import numpy as np
 import networkx as nx
 import plotly.graph_objects as go
 import cloudpickle as cp
 from urllib.request import urlopen
 
-
-adj = pickle.load(open("adj","rb"))
+#load pickle of dataframes with all filings and adjacency matrices (dict with keys=quarters)
 df = cp.load(urlopen('https://s3groupgeorgia.s3.eu-central-1.amazonaws.com/data/df_All'))
+adj = cp.load(urlopen('https://s3groupgeorgia.s3.eu-central-1.amazonaws.com/data/adj'))
 
-
+#--------------------------------------------------------------------------------------------
+# functions used in callback
 
 def centrality_attr(G):
-    '''Calculate centrality metric and assign to nodes'''
+    '''Calculate centrality metric and assign to node attr'''
     bb = list(nx.betweenness_centrality(G).values())
     cc = list(nx.closeness_centrality(G).values())
     dc = list(nx.degree_centrality(G).values())
     eg = list(nx.eigenvector_centrality(G).values())
     mean = 0.25*(bb/np.sum(bb)+cc/np.sum(cc)+dc/np.sum(dc)+eg/np.sum(eg))
-    centrality = {j: {'betweenness': bb[j], 'closeness': cc[j], 'degree': dc[j], 'eigenvalue':eg[j], 'mean':mean[j]} for j,i in enumerate(G.nodes)}
+    centrality = {j: {'betweenness': bb[j], 'closeness': cc[j], 'degree': dc[j], 'eigenvector':eg[j], 'mean':mean[j]} for j,i in enumerate(G.nodes)}
     return nx.set_node_attributes(G, centrality)
 
 
-#print([i for i in G.nodes])
 def rank_centrality(G,centrality_metric):
     '''Returns a ranking of most central nodes + centrality value'''
     all_metrics = {i:G.nodes[i][centrality_metric] for i in G.nodes}
@@ -43,7 +42,15 @@ def lowest_rank_centrality(G, centrality_metric):
     rank_text = "1. %s : %.4f" %(rank[0][0],rank[0][1])
     return rank_text
 
+def get_cenTable(G, centrality_metric):
+    '''Dataframe for ranked nodes based on centrality metric'''
+    all_metrics = {i:G.nodes[i][centrality_metric] for i in G.nodes}
+    cenTable=pd.DataFrame(sorted(all_metrics.items(), key=lambda x: x[1],reverse=True),columns=['Company name',str(centrality_metric)])
+    return cenTable
+
+
 def connectivity(G):
+    '''get connectivity of the graph'''
     diameter = 'Diameter: %s'%nx.diameter(G)
     edge_connectivity = 'Edge connectivity: %s' %nx.edge_connectivity(G)
     node_connectivity = 'Node connectivity: %s' %nx.node_connectivity(G)
@@ -54,37 +61,30 @@ def network_fit(adj,df):
     np.random.seed(3)
     # define network in networkx
     G = nx.from_numpy_matrix(adj)
-
+    # relabel nodes according to company names
     labels = list(set(df['Entity name']))
     labels =[i.title() for i in labels]
-
-
     labels = {j: labels[i] for i,j in enumerate(G.nodes)}
+    # calculate centrality metrics and assign to node attributes
     centrality_attr(G)
-
     G=nx.relabel_nodes(G,labels)
 
-    # calculate centrality metrics and assign to node attributes
     return G
 
-
-# TODO: instead of CIK numbers company names
 def plot_network(adj,df, centrality_metric):
     ''' plot network from adjacency matrix of a quarter and weight according to centrality metric'''
     # positions of nodes according to spring algorithm
     G= network_fit(adj,df)
     pos = nx.spring_layout(G, dim=2)
-    # we need to seperate the X,Y coordinates for Plotly
+    # seperate the X,Y coordinates for Plotly
     x_nodes = [pos[i][0] for i in G.nodes]  # x-coordinates of nodes
     y_nodes = [pos[i][1] for i in G.nodes]  # y-coordinates
 
     # hover info for node
-    node_info = ['Company: ' + str(j) + '<br>' + str(centrality_metric) + ' centrality: ' + str(
-        np.round(G.nodes[j][centrality_metric], 4)) +'<br>' + 'Market value: '+ str(int(np.sum(adj,axis=1)[i]/(10**10))) + ' *e^10' for i,j in enumerate(G.nodes)]
-    # edge_info=['MV of shared sec.:' + str(i) for i in adj]
+    node_info = ['Company: ' + str(j) + '<br>' + str(centrality_metric) + ' centrality: ' + str(np.round(G.nodes[j][centrality_metric], 4)) +'<br>' + 'Total value investments: '+ str(int(np.sum(adj,axis=1)[i]/(10**8))) + ' +e^11 $' for i,j in enumerate(G.nodes)]
+
     # traces for edges: different weights -> different widths of lines (I scale them to 0-1 so that abs differences are not to big)
     edge_list = G.edges
-    total_weight = []
     edges_list = [dict(type='scatter',
                        x=[pos[edge[0]][0], pos[edge[1]][0]],
                        y=[pos[edge[0]][1], pos[edge[1]][1]],
@@ -93,44 +93,7 @@ def plot_network(adj,df, centrality_metric):
                                    10**18) + 0.05, color='blue')) for edge in
                   edge_list]
 
-    # trace3_list = []
-    # a=[]
-    # middle_node_trace = go.Scatter(
-    #     x=[],
-    #     y=[],
-    #     text=[],
-    #     mode='markers',
-    #     hoverinfo='text',
-    #     marker=go.Marker(
-    #         opacity=0
-    #     )
-    # )
-    # for edge in G.edges(data=True):
-    #     trace3=go.Scatter(
-    #         x=[],
-    #         y=[],
-    #         mode='lines',
-    #         line=dict(color='rgb(210,210,210)', width=edge[2]['weight']),
-    #         hoverinfo='none'
-    #     )
-    #     x0, y0 = pos[edge[0]]
-    #     x1, y1 = pos[edge[1]]
-    #     trace3['x'] += (x0, x1, None)
-    #     trace3['y'] += (y0, y1, None)
-    #     trace3_list += trace3
 
-    #     middle_node_trace['x']+=(x0+x1)/2
-    #     middle_node_trace['y']+=(y0+y1)/2
-    #     a.append(edge[2]['weight'])
-    # middle_node_trace['text'] =a
-
-    # edges_list.append(trace3_list)
-    # txt='Most central companies:<br>1. %s <br> 2. %s <br> 3. %s' %(d[0],d[1],d[2])
-
-    # trace for nodes, different node sizes -> choose centrality alg
-    # node sizes are multiplied by a number so that abs differences are bigger
-    #total_weight_nodes = [G.nodes[i][centrality_metric] for i in G.nodes]
-    #print(total_weight_nodes)
     trace_nodes = go.Scatter(x=x_nodes,
                              y=y_nodes,
                              mode='markers',
@@ -148,7 +111,7 @@ def plot_network(adj,df, centrality_metric):
     # layout for the plot
 
     # Include the traces, create a figure
-    layout = go.Layout(title="Network for shared positions of 20 large investment companies",
+    layout = go.Layout(title="Network with shared positions of investment companies",
                        width=650,
                        height=625,
                        showlegend=False,

@@ -62,7 +62,7 @@ def network_fit(adj,df):
     # define network in networkx
     G = nx.from_numpy_matrix(adj)
     # relabel nodes according to company names
-    labels = list(set(df['Entity name']))
+    labels = dict.fromkeys(df['Entity name']).keys()
     labels =[i.title() for i in labels]
     labels = {j: labels[i] for i,j in enumerate(G.nodes)}
     # calculate centrality metrics and assign to node attributes
